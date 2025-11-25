@@ -1,0 +1,220 @@
+import { useState, useCallback, useEffect, useRef } from 'react'
+
+export default function useSpeechToText(){
+  const [listening, setListening] = useState(false)
+  const [transcript, setTranscript] = useState('')
+  const [error, setError] = useState(null)
+  const recognitionRef = useRef(null)
+  const finalTranscriptRef = useRef('')
+  const isStoppingRef = useRef(false)
+  const silenceTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    // Check browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    
+    if (!SpeechRecognition) {
+      setError('❌ Speech Recognition not supported. Use Chrome, Edge, or Safari.')
+      return
+    }
+
+    try {
+      const recognition = new SpeechRecognition()
+      
+      // Configure recognition - CRITICAL SETTINGS
+      recognition.continuous = false // Let it stop on silence naturally
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+      recognition.maxAlternatives = 1
+
+      // On start
+      recognition.onstart = () => {
+        console.log('[STT] Recognition started')
+        setListening(true)
+        setError(null)
+        isStoppingRef.current = false
+        finalTranscriptRef.current = ''
+        
+        // Clear any existing timeout
+        if (silenceTimeoutRef.current) {
+          clearTimeout(silenceTimeoutRef.current)
+        }
+      }
+
+      // On result - this is where text is captured
+      recognition.onresult = (event) => {
+        console.log('[STT] onresult event:', {
+          resultIndex: event.resultIndex,
+          resultsLength: event.results.length,
+          isFinal: event.results[event.results.length - 1]?.isFinal,
+          confidence: event.results[event.results.length - 1]?.[0]?.confidence
+        })
+
+        let interimTranscript = ''
+        let hasResult = false
+
+        // Loop through all results
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript
+          const confidence = event.results[i][0].confidence
+
+          if (event.results[i].isFinal) {
+            // This is a final result, add to our final transcript
+            finalTranscriptRef.current += transcript + ' '
+            console.log('[STT] Final result:', transcript, 'Confidence:', confidence)
+            hasResult = true
+          } else {
+            // This is interim, just for preview
+            interimTranscript += transcript
+            console.log('[STT] Interim result:', transcript)
+          }
+        }
+
+        // Update state with both final and interim
+        const combined = (finalTranscriptRef.current + interimTranscript).trim()
+        setTranscript(combined)
+        
+        // If we got a final result and listening, restart to capture more
+        if (hasResult && !isStoppingRef.current && event.results[event.results.length - 1].isFinal) {
+          console.log('[STT] Got final result, restarting for continuous capture')
+          try {
+            // Restart recognition to keep listening
+            setTimeout(() => {
+              if (!isStoppingRef.current && recognitionRef.current) {
+                recognitionRef.current.start()
+              }
+            }, 100)
+          } catch (err) {
+            console.log('[STT] Restart error (normal):', err.message)
+          }
+        }
+      }
+
+      // On error
+      recognition.onerror = (event) => {
+        console.error('[STT] Error:', event.error)
+        
+        const errorMap = {
+          'network': '🌐 Network error - check your internet connection',
+          'not-allowed': '🔒 Microphone access denied - grant permission in browser settings',
+          'no-speech': '🎤 No speech detected - speak louder and more clearly into the microphone',
+          'audio-capture': '🎙️ No microphone found - connect a microphone and select it',
+          'service-not-allowed': '⛔ Service unavailable in your region',
+          'bad-grammar': '📝 Grammar error',
+          'aborted': 'Recording stopped',
+        }
+
+        const msg = errorMap[event.error] || `Error: ${event.error}`
+        setError(msg)
+        
+        if (event.error !== 'aborted' && event.error !== 'no-speech') {
+          setListening(false)
+        }
+      }
+
+      // On end
+      recognition.onend = () => {
+        console.log('[STT] Recognition ended, isStopping:', isStoppingRef.current)
+        if (isStoppingRef.current) {
+          setListening(false)
+        }
+      }
+
+      recognitionRef.current = recognition
+      console.log('[STT] SpeechRecognition initialized')
+    } catch (err) {
+      console.error('[STT] Failed to initialize:', err)
+      setError(`Failed to initialize: ${err.message}`)
+    }
+
+    // Cleanup
+    return () => {
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
+      }
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort()
+        } catch (err) {
+          console.error('[STT] Cleanup error:', err)
+        }
+      }
+    }
+  }, [])
+
+  const startListening = useCallback(() => {
+    console.log('[STT] startListening called')
+    
+    if (!recognitionRef.current) {
+      setError('Speech Recognition not available')
+      console.error('[STT] Recognition not initialized')
+      return
+    }
+
+    try {
+      // Reset state
+      finalTranscriptRef.current = ''
+      setTranscript('')
+      setError(null)
+      isStoppingRef.current = false
+
+      // Clear any timeout
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
+      }
+
+      // Start recognition
+      recognitionRef.current.start()
+      console.log('[STT] start() called on recognition')
+      
+      // Set a timeout to auto-stop after 30 seconds of listening
+      silenceTimeoutRef.current = setTimeout(() => {
+        if (recognitionRef.current && !isStoppingRef.current) {
+          console.log('[STT] Auto-stopping after 30 seconds')
+          stopListening()
+        }
+      }, 30000)
+    } catch (err) {
+      console.error('[STT] Start error:', err)
+      // If already running, that's okay
+      if (!err.message.includes('already started')) {
+        setError(`Start error: ${err.message}`)
+      }
+    }
+  }, [])
+
+  const stopListening = useCallback(() => {
+    console.log('[STT] stopListening called')
+    
+    if (!recognitionRef.current) {
+      return
+    }
+
+    try {
+      isStoppingRef.current = true
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current)
+      }
+      recognitionRef.current.stop()
+      console.log('[STT] stop() called on recognition')
+      setListening(false)
+    } catch (err) {
+      console.error('[STT] Stop error:', err)
+      setError(`Stop error: ${err.message}`)
+    }
+  }, [])
+
+  const clearTranscript = useCallback(() => {
+    setTranscript('')
+    finalTranscriptRef.current = ''
+  }, [])
+
+  return {
+    listening,
+    transcript,
+    startListening,
+    stopListening,
+    error,
+    clearTranscript,
+  }
+}
