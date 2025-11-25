@@ -13,6 +13,21 @@ export default function useTextToSpeech(){
     if(opts.rate) u.rate = opts.rate
     if(opts.pitch) u.pitch = opts.pitch
     if(opts.lang) u.lang = opts.lang
+    // Voice selection: prefer explicit voiceURI, otherwise try matching language
+    try {
+      const voices = synth.getVoices() || []
+      if(opts.voiceURI) {
+        const v = voices.find(v => v.voiceURI === opts.voiceURI || v.name === opts.voiceURI)
+        if(v) u.voice = v
+      } else if(opts.lang) {
+        // prefer exact match, then prefix match
+        let v = voices.find(v => v.lang === opts.lang)
+        if(!v) v = voices.find(v => v.lang && v.lang.startsWith(opts.lang.split('-')[0]))
+        if(v) u.voice = v
+      }
+    } catch (e) {
+      // ignore voice selection errors
+    }
     currentUtterance = u
     u.onstart = ()=> setSpeaking(true)
     u.onend = ()=> setSpeaking(false)

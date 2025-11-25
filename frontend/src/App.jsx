@@ -5,10 +5,13 @@ import STTPage from './pages/STTPage'
 import TTSPage from './pages/TTSPage'
 import OCRPage from './pages/OCRPage'
 import { ScreenReaderProvider, useScreenReader } from './context/ScreenReaderContext'
+import { LanguageProvider, useLanguage } from './context/LanguageContext'
+import LanguageSelector from './components/LanguageSelector'
 
 export default function App() {
   return (
     <ScreenReaderProvider>
+      <LanguageProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
           <header className="bg-white dark:bg-slate-800 shadow">
@@ -21,7 +24,10 @@ export default function App() {
                   <NavLink to="/tts" className={({isActive}) => isActive ? 'font-semibold' : ''}>TTS</NavLink>
                   <NavLink to="/ocr" className={({isActive}) => isActive ? 'font-semibold' : ''}>OCR</NavLink>
                 </nav>
-                <ScreenReaderToggle />
+                <div className="hidden sm:flex items-center gap-3">
+                  <LanguageSelectorWrapper />
+                  <ScreenReaderToggle />
+                </div>
                 <ThemeToggle />
               </div>
             </div>
@@ -42,6 +48,7 @@ export default function App() {
           </footer>
         </div>
       </BrowserRouter>
+      </LanguageProvider>
     </ScreenReaderProvider>
   )
 }
@@ -98,5 +105,14 @@ function ThemeToggle(){
     >
       {dark ? 'Dark' : 'Light'}
     </button>
+  )
+}
+
+function LanguageSelectorWrapper(){
+  const { lang, setLang } = useLanguage()
+  return (
+    <div>
+      <LanguageSelector value={lang} onChange={(v)=> setLang(v)} />
+    </div>
   )
 }

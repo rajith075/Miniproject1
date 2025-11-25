@@ -1,7 +1,20 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function Home(){
+  const { lang, setLang } = useLanguage()
+
+  const labels = {
+    'en-US': 'English',
+    'kn-IN': 'Kannada',
+    'hi-IN': 'Hindi',
+    'ta-IN': 'Tamil',
+    'te-IN': 'Telugu'
+  }
+
+  const pick = (code) => { try { setLang(code) } catch(e){} }
+
   return (
     <div id="home" className="space-y-8 pb-8">
       <section className="text-center py-8">
@@ -10,6 +23,19 @@ export default function Home(){
       </section>
 
       <section>
+        <h2 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">Language</h2>
+        <div className="mb-6 flex flex-wrap gap-3">
+          {Object.entries(labels).map(([code,label]) => (
+            <button
+              key={code}
+              onClick={() => pick(code)}
+              className={`px-3 py-1 rounded-md text-sm font-medium border ${lang===code ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'}`}
+            >
+              {label} ({code})
+            </button>
+          ))}
+        </div>
+
         <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Tools</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <Link to="/stt" className="flex flex-col p-6 bg-white dark:bg-slate-800 rounded-lg shadow-md hover:shadow-xl hover:scale-105 transition-all border border-slate-200 dark:border-slate-700 h-full">

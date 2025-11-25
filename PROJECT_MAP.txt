@@ -1,0 +1,237 @@
+╔════════════════════════════════════════════════════════════════════════════════╗
+║                   ASSISTIVE PLATFORM - PROJECT STRUCTURE                        ║
+╚════════════════════════════════════════════════════════════════════════════════╝
+
+                              BROWSER CLIENT
+                        (http://localhost:5173)
+                          ┌──────────────────┐
+                          │  React Frontend  │
+                          │    (Vite)        │
+                          └────────┬─────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │              │              │
+            ┌───────▼──────┐   ┌───▼──────┐  ┌──▼────────┐
+            │ Web Speech   │   │Web Audio │  │localStorage
+            │ API (Native) │   │API (VU)  │  │(Persistence)
+            └──────────────┘   └──────────┘  └───────────┘
+                    │
+                    │ HTTP/JSON
+                    │
+          ╔─────────▼──────────┐
+          │  FLASK BACKEND     │
+          │ (http://localhost  │
+          │    :5000/api/)     │
+          └────────┬───────────┘
+                   │
+      ┌────────────┼────────────┐
+      │            │            │
+  ┌───▼────┐ ┌────▼─────┐  ┌──▼────────┐
+  │ Speech │ │  File    │  │ Supported │
+  │Recog.  │ │ Upload   │  │ Languages │
+  │Engine  │ │ Handler  │  │ Endpoint  │
+  └────────┘ └──────────┘  └───────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+
+📁 DIRECTORY LAYOUT
+
+assistive-platform/                    ← Project Root
+│
+├── 📂 frontend/                        ← React Application
+│   ├── src/
+│   │   ├── components/                 ← UI Components (STTPanel, TTSPanel, etc.)
+│   │   ├── pages/                      ← Page Components (Home, STT, TTS, OCR)
+│   │   ├── hooks/                      ← Custom Hooks (useSpeechToText, etc.)
+│   │   ├── context/                    ← Global State (ScreenReaderContext)
+│   │   ├── lib/                        ← Utilities (api.js for backend calls)
+│   │   ├── styles/                     ← Global CSS + Tailwind
+│   │   ├── App.jsx                     ← Root Component
+│   │   └── main.jsx                    ← Entry Point
+│   ├── public/                         ← Static Files
+│   ├── package.json                    ← NPM Dependencies
+│   ├── vite.config.js                  ← Vite Config
+│   ├── tailwind.config.cjs             ← Tailwind Config
+│   ├── .env.example                    ← Environment Template
+│   └── README.md                       ← Frontend Docs
+│
+├── 📂 backend/                         ← Python Flask Server
+│   ├── app.py                          ← Main Flask App
+│   ├── requirements.txt                ← Python Dependencies
+│   ├── .env.example                    ← Environment Template
+│   ├── .gitignore                      ← Ignore Rules
+│   ├── 📂 venv/                        ← Virtual Environment (LOCAL, not in git)
+│   ├── 📂 uploads/                     ← Audio File Storage
+│   └── README.md                       ← Backend Docs
+│
+├── 📄 setup.ps1                        ← Windows Setup Script
+├── 📄 README.md                        ← Main Documentation
+├── 📄 SETUP.md                         ← Detailed Setup Guide
+├── 📄 QUICKSTART.md                    ← Quick Start (you are here!)
+├── 📄 ARCHITECTURE.md                  ← Technical Architecture
+└── 📄 .git/                            ← Git Repository
+
+════════════════════════════════════════════════════════════════════════════════
+
+🔗 COMMUNICATION FLOW
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    USER INTERACTION                             │
+└──────────────────────┬──────────────────────────────────────────┘
+                       │
+                       ▼
+        ┌──────────────────────────────┐
+        │   REACT FRONTEND (5173)      │
+        │  ┌────────────────────────┐  │
+        │  │  STT/TTS/OCR Pages    │  │
+        │  │  & Screen Reader      │  │
+        │  └────────────────────────┘  │
+        └──────────────┬───────────────┘
+                       │
+        ┌──────────────┴───────────────┐
+        │                              │
+        ▼                              ▼
+   [Browser APIs]              [Backend API]
+   • Web Speech               POST /api/stt/upload
+   • Web Audio                POST /api/stt/stream
+   • localStorage             GET /api/languages
+   • Fetch API                GET /api/health
+        │                              │
+        │                    ┌─────────▼──────────┐
+        │                    │ FLASK SERVER (5000)│
+        │                    │  ┌───────────────┐ │
+        │                    │  │ SpeechRecog.  │ │
+        │                    │  │ OCR Engine    │ │
+        │                    │  │ File Handler  │ │
+        │                    │  └───────────────┘ │
+        │                    └────────────────────┘
+        │                              │
+        └──────────────┬───────────────┘
+                       │
+                       ▼
+              ┌──────────────────┐
+              │  RESULTS DISPLAY │
+              │  • Transcript    │
+              │  • Text Output   │
+              │  • Audio Play    │
+              └──────────────────┘
+
+════════════════════════════════════════════════════════════════════════════════
+
+🎯 QUICK ACCESS GUIDE
+
+Task                          Location              Command
+────────────────────────────  ──────────────────    ──────────────────────────
+Run frontend                  frontend/             npm run dev
+Run backend                   backend/              python app.py
+Install frontend deps         frontend/             npm install
+Install backend deps          backend/              pip install -r requirements.txt
+View frontend source          frontend/src/         (components, pages, hooks, etc.)
+Modify API endpoints          backend/              app.py (routes starting with @app)
+Add API calls from frontend   frontend/src/lib/     api.js
+Global state management       frontend/src/context/ ScreenReaderContext.jsx
+Styling                       frontend/src/styles/  index.css (Tailwind + custom)
+Component styling             components/           *.jsx files (Tailwind classes)
+Setup documentation           root/                 SETUP.md
+Architecture docs             root/                 ARCHITECTURE.md
+
+════════════════════════════════════════════════════════════════════════════════
+
+🔧 COMMON WORKFLOWS
+
+[Frontend Only Development]
+  $ cd frontend
+  $ npm run dev
+  → Works without backend (uses browser APIs)
+
+[Backend Only Development]
+  $ cd backend
+  $ python app.py
+  → API available at http://localhost:5000/api/*
+
+[Full Stack Development] ← RECOMMENDED
+  Terminal 1: cd frontend && npm run dev
+  Terminal 2: cd backend && python app.py
+  → Frontend on 5173, Backend on 5000
+
+[Production Build]
+  $ cd frontend && npm run build
+  → Creates optimized dist/ folder
+  $ cd backend && python app.py  # with debug=False
+  → Production Flask server
+
+════════════════════════════════════════════════════════════════════════════════
+
+📊 PORT MAPPING
+
+Port    Service         URL                    Status
+────    ───────         ───                    ──────
+5173    Frontend Dev    http://localhost:5173  React app
+5000    Backend API     http://localhost:5000  Flask server
+        
+
+[You Open This]           [Requests Go Here]
+│                         │
+▼                         ▼
+http://localhost:5173 ──→ http://localhost:5000/api/*
+  (React App)             (Python Backend)
+
+════════════════════════════════════════════════════════════════════════════════
+
+🎓 LEARNING PATHS
+
+New to Frontend?
+  1. Read: frontend/README.md
+  2. Explore: frontend/src/pages/ (start with Home.jsx)
+  3. Check: Tailwind CSS styling in components
+
+New to Backend?
+  1. Read: backend/README.md
+  2. Review: backend/app.py (look at @app.route decorators)
+  3. Test: curl http://localhost:5000/api/health
+
+New to Architecture?
+  1. Read: ARCHITECTURE.md (this project's tech stack)
+  2. Study: Data flow diagrams above
+  3. Check: SETUP.md for deployment info
+
+Deploying?
+  1. Build frontend: npm run build → dist/
+  2. Deploy dist/ to: Vercel, Netlify, GitHub Pages, etc.
+  3. Deploy backend to: Heroku, Railway, AWS, etc.
+  4. Update API URLs in frontend/.env
+
+════════════════════════════════════════════════════════════════════════════════
+
+✅ HEALTH CHECK
+
+[ ] Frontend running on 5173
+  → Open http://localhost:5173 in browser
+  → Should see Home page with STT, TTS, OCR cards
+
+[ ] Backend running on 5000
+  → curl http://localhost:5000/api/health
+  → Should return: {"status": "ok", "service": "..."}
+
+[ ] Microphone working
+  → Go to /stt page
+  → Click "Start Recording"
+  → Speak into microphone
+  → Check browser console for [STT] logs
+
+[ ] Screen Reader working
+  → Click "🔊 Screen Reader" toggle in header
+  → Move mouse over text
+  → Should hear text read aloud
+
+════════════════════════════════════════════════════════════════════════════════
+
+Need help? Check these files in order:
+1. QUICKSTART.md (you are here!)
+2. SETUP.md (detailed instructions)
+3. ARCHITECTURE.md (technical overview)
+4. README.md (project overview)
+5. frontend/README.md (frontend docs)
+6. backend/README.md (backend docs)
+
+════════════════════════════════════════════════════════════════════════════════

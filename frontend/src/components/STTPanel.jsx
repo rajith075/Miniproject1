@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import useSpeechToText from '../hooks/useSpeechToText'
+import { useLanguage } from '../context/LanguageContext'
 
 export default function STTPanel(){
-  const { listening, transcript, startListening, stopListening, error, level } = useSpeechToText()
+  const { lang } = useLanguage()
+  const { listening, transcript, startListening, stopListening, error, level } = useSpeechToText({ lang })
   const [exported, setExported] = useState('')
   
   React.useEffect(() => {
@@ -37,6 +39,7 @@ export default function STTPanel(){
       </div>
 
       {/* VU Meter */}
+      <div className="mb-2 text-xs text-slate-600 dark:text-slate-400">Language: <strong>{lang}</strong></div>
       <div className="mb-4 p-4 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg">
         <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">🎙️ Microphone Level:</p>
         <div className="w-full h-6 bg-slate-300 dark:bg-slate-700 rounded overflow-hidden">
