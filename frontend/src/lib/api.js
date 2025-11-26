@@ -74,6 +74,30 @@ export async function transcribeAudioStream(audioData, language = 'en-US') {
 }
 
 /**
+ * Server-side TTS synthesis (gTTS) - returns Blob
+ * @param {string} text
+ * @param {string} language (e.g. 'hi-IN')
+ */
+export async function synthesizeServerTTS(text, language = 'en-US') {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/tts/synthesize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, language })
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error || `TTS failed: ${res.status}`)
+    }
+    const blob = await res.blob()
+    return blob
+  } catch (err) {
+    console.error('[API] Server TTS failed:', err)
+    throw err
+  }
+}
+
+/**
  * Get list of supported languages for STT
  */
 export async function getSupportedLanguages() {

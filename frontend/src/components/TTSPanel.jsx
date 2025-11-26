@@ -11,6 +11,9 @@ export default function TTSPanel(){
   const [voiceURI, setVoiceURI] = useState(() => {
     try { return localStorage.getItem('tts_voice') || '' } catch { return '' }
   })
+  const [serverPlaying, setServerPlaying] = useState(false)
+  const [serverError, setServerError] = useState(null)
+  const serverAudioRef = React.useRef(null)
 
   useEffect(() => {
     if(typeof window === 'undefined') return
@@ -20,7 +23,18 @@ export default function TTSPanel(){
       setVoices(v)
       // if no saved voice, try to pick voice matching lang
       if(!voiceURI && v.length) {
-        const match = v.find(x => x.lang === lang) || v.find(x => x.lang && x.lang.startsWith(lang.split('-')[0]))
+        // Prefer India-region voices and names for Indian languages
+        const prefix = lang.split('-')[0]
+        const indianCodes = ['hi','kn','ta','te']
+        let match = null
+        if(indianCodes.includes(prefix)) {
+          match = v.find(x => x.lang && x.lang.toLowerCase() === `${prefix}-in`)
+          if(!match) {
+            const kw = { hi: 'Hindi', kn: 'Kannada', ta: 'Tamil', te: 'Telugu' }[prefix]
+            match = v.find(x => (x.name||'').includes(kw) || (x.lang||'').toLowerCase().includes('in'))
+          }
+        }
+        if(!match) match = v.find(x => x.lang === lang) || v.find(x => x.lang && x.lang.startsWith(prefix))
         if(match) setVoiceURI(match.voiceURI || match.name)
       }
     }
@@ -61,23 +75,53 @@ export default function TTSPanel(){
           <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Voice</label>
           <select value={voiceURI} onChange={(e)=>setVoiceURI(e.target.value)} className="px-2 py-1 rounded border bg-white dark:bg-slate-800 text-sm">
             <option value="">(default)</option>
+            {/* Server-side options for the five supported languages */}
+            <option value={`server:en-US`}>Server - English (en-US)</option>
+            <option value={`server:hi-IN`}>Server - Hindi (hi-IN)</option>
+            <option value={`server:ta-IN`}>Server - Tamil (ta-IN)</option>
+            <option value={`server:te-IN`}>Server - Telugu (te-IN)</option>
+            <option value={`server:kn-IN`}>Server - Kannada (kn-IN)</option>
             {voices.map(v=> (
               <option key={v.voiceURI || v.name} value={v.voiceURI || v.name}>{v.name} — {v.lang}</option>
             ))}
           </select>
         </div>
 
-        <button 
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            speaking 
-              ? 'bg-green-500 hover:bg-green-600 text-white shadow-md' 
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md disabled:bg-slate-400'
-          }`} 
-          onClick={()=>speak(text, {rate, lang, voiceURI})} 
-          disabled={speaking || !text.trim()}
-        >
-          {speaking ? '▶ Playing' : '▶ Play'}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              speaking 
+                ? 'bg-green-500 hover:bg-green-600 text-white shadow-md' 
+                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md disabled:bg-slate-400'
+            }`} 
+            onClick={async ()=>{
+              if(!text.trim()) return
+              // If a server voice is selected, synthesize on server and play
+              if(voiceURI && voiceURI.startsWith('server:')){
+                try{
+                  setServerError(null)
+                  setServerPlaying(true)
+                  const langCode = voiceURI.split(':')[1]
+                  const blob = await (await import('../lib/api')).synthesizeServerTTS(text, langCode)
+                  const url = URL.createObjectURL(blob)
+                  const a = new Audio(url)
+                  serverAudioRef.current = a
+                  a.onended = () => { setServerPlaying(false); URL.revokeObjectURL(url); serverAudioRef.current = null }
+                  await a.play()
+                }catch(err){
+                  setServerError(err?.message || String(err))
+                  setServerPlaying(false)
+                }
+                return
+              }
+              // otherwise use browser speak
+              speak(text, {rate, lang, voiceURI})
+            }} 
+            disabled={speaking || !text.trim()}
+          >
+            {speaking || serverPlaying ? '▶ Playing' : '▶ Play'}
+          </button>
+        </div>
         <button 
           className={`px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg font-medium transition-colors ${
             speaking 
