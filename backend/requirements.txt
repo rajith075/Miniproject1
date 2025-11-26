@@ -3,3 +3,4 @@ Flask-CORS==4.0.0
 python-dotenv==1.0.0
 SpeechRecognition==3.14.0
 pydub==0.25.1
+gTTS==2.3.1

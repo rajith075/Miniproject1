@@ -77,3 +77,13 @@ Tip: For most use-cases, use the upload endpoint with standard audio containers 
 
 - The backend uses `SpeechRecognition`'s `recognize_google` with the provided `language` code. Make sure the language codes match those returned by `/api/stt/supported-languages`.
 - The `/api/stt/stream` endpoint expects raw PCM audio bytes matching the `sr.AudioData` parameters (sample rate 16000, sample width 2). If your client sends WAV/MP3 container data, the server must decode it first (e.g., with `pydub`) before creating `sr.AudioData`. For reliability, prefer file uploads (`/api/stt/upload`) unless you implement proper client-side encoding to raw PCM.
+
+### Server-side TTS (gTTS)
+
+- **POST** `/api/tts/synthesize`
+- Body: JSON `{ "text": "...", "language": "hi-IN" }`
+- Returns: `audio/mpeg` MP3 bytes synthesized using `gTTS`.
+
+This endpoint is available as a convenient server-side TTS fallback that supports Indian languages (Hindi, Tamil, Telugu, Kannada) using `gTTS`. The frontend includes a "Play (Server)" button on the TTS page which will call this endpoint and play the returned MP3.
+
+Note: `gTTS` uses Google's translate TTS service under the hood and supports the language short codes `hi`, `ta`, `te`, `kn`, `en`.
